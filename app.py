@@ -6,9 +6,10 @@ import numpy as np
 
 # Constants
 CITY_NAME = "Austin"
-geojson_path = "outputs/austin_zips.geojson"
+geojson_path = "outputs/austin_zips.geojson" # adding a comment to test
 MERGED_PATH = "outputs/merged_data.csv"
 SUMMARY_PATH = "outputs/cluster_summary.csv"
+
 
 st.set_page_config(page_title="Broadband Equity Dashboard", layout="wide")
 st.info("""
