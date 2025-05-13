@@ -6,7 +6,7 @@ import numpy as np
 
 # Constants
 CITY_NAME = "Austin"
-geojson_path = "src/tx_texas_zip_codes_geo.min.json"
+geojson_path = "outputs/austin_zips.geojson"
 MERGED_PATH = "outputs/merged_data.csv"
 SUMMARY_PATH = "outputs/cluster_summary.csv"
 
