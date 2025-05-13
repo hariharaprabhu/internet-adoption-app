@@ -151,6 +151,10 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# Ignore local testing scripts
+main.py
+test_*.py
+
 # Pyre type checker
 .pyre/
 
