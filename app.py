@@ -9,7 +9,7 @@ from src.visualization import plot_socioeconomic_clusters
 # Constants
 MERGED_PATH = "outputs/all_msa_merged.csv"
 SUMMARY_PATH = "outputs/all_msa_clusters.csv"
-GEOJSON_FOLDER = "outputs/geo_json"
+GEOJSON_FOLDER = "outputs/geojson"
 
 st.set_page_config(page_title="Broadband Equity Dashboard", layout="wide")
 
