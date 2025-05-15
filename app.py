@@ -49,13 +49,13 @@ fig = plot_socioeconomic_clusters(msa_df, city_name=selected_msa, geojson_path=g
 
 # --- Use metrics from file if available ---
 if "avg_adoption_rate" in msa_summary.columns:
-    adoption = msa_summary["avg_adoption_rate"].iloc[0]
-    availability = msa_summary["avg_availability"].iloc[0]
+    adoption = msa_summary["avg_adoption_rate"].iloc[0] * 100
+    availability = msa_summary["avg_availability"].iloc[0] * 100
     income = msa_summary["avg_median_income"].iloc[0]
     population = msa_summary["total_population"].iloc[0]
 else:
-    adoption = msa_df["internet_adoption_rate"].mean()
-    availability = msa_df["fcc_gigabit_coverage"].mean()
+    adoption = msa_df["internet_adoption_rate"].mean() * 100
+    availability = msa_df["fcc_gigabit_coverage"].mean() * 100
     income = msa_df["median_income"].median()
     population = msa_df["total_population"].sum()
     zips = msa_df["zip"].nunique()
