@@ -9,7 +9,7 @@ from src.visualization import plot_socioeconomic_clusters
 # Constants
 MERGED_PATH = "outputs/all_msa_merged.csv"
 SUMMARY_PATH = "outputs/all_msa_clusters.csv"
-GEOJSON_FOLDER = "outputs/geojson"
+GEOJSON_FOLDER = "outputs/geojson"  # <-- fixed directory
 
 st.set_page_config(page_title="Broadband Equity Dashboard", layout="wide")
 
@@ -17,37 +17,73 @@ st.info("""
 🔧 **This dashboard is under active development.**
 Data and insights are updated regularly, and the tool may change as we incorporate feedback.
 
-If you spot an issue or have suggestions, feel free to reach out or check back for the latest version.
+📌 **Disclaimer:** ZIP codes that span multiple counties are associated with the county having the highest total population (based on HUD `TOT_RATIO`).
 """)
 
 st.title("📡 Broadband Equity Dashboard")
 
-# Sidebar for MSA selection
 @st.cache_data
 def load_data():
-    merged_df = pd.read_csv(MERGED_PATH)
+    merged_df = pd.read_csv(MERGED_PATH, dtype={"zip": str})
     cluster_summary = pd.read_csv(SUMMARY_PATH)
     return merged_df, cluster_summary
 
+# Load data
 merged_df, cluster_summary = load_data()
 available_msas = sorted(merged_df["MSA"].unique())
 
+# Select metro
 selected_msa = st.sidebar.selectbox("Select Metro Area", available_msas)
-st.markdown(f"### City: {selected_msa}")
+st.markdown(f"### Metro: {selected_msa}")
 
-# Filter data for selected MSA
-msa_df = merged_df[merged_df["MSA"] == selected_msa]
+# Filter MSA data
+msa_df = merged_df[merged_df["MSA"] == selected_msa].copy()
 msa_summary = cluster_summary[cluster_summary["MSA"] == selected_msa]
 
-# Load relevant geojson
+# === Hierarchical Filters ===
+st.sidebar.markdown("### Additional Filters")
+
+# 1. County filter
+county_options = sorted(msa_df["County"].dropna().unique())
+selected_counties = st.sidebar.multiselect("Filter by County", county_options)
+
+# 2. City options filtered by county
+if selected_counties:
+    city_options = sorted(msa_df[msa_df["County"].isin(selected_counties)]["city"].dropna().unique())
+else:
+    city_options = sorted(msa_df["city"].dropna().unique())
+selected_cities = st.sidebar.multiselect("Filter by City", city_options)
+
+# 3. ZIP options filtered by city or county
+if selected_cities:
+    zip_options = sorted(msa_df[msa_df["city"].isin(selected_cities)]["zip"].dropna().unique())
+elif selected_counties:
+    zip_options = sorted(msa_df[msa_df["County"].isin(selected_counties)]["zip"].dropna().unique())
+else:
+    zip_options = sorted(msa_df["zip"].dropna().unique())
+selected_zips = st.sidebar.multiselect("Filter by ZIP", zip_options)
+
+# Apply filters in order
+if selected_counties:
+    msa_df = msa_df[msa_df["County"].isin(selected_counties)]
+if selected_cities:
+    msa_df = msa_df[msa_df["city"].isin(selected_cities)]
+if selected_zips:
+    msa_df = msa_df[msa_df["zip"].isin(selected_zips)]
+
+# Load GeoJSON file
 geojson_file = os.path.join(GEOJSON_FOLDER, f"{selected_msa.lower().replace(' ', '_')}_zips.geojson")
+if not os.path.exists(geojson_file):
+    st.error(f"GeoJSON file not found: {geojson_file}")
+    st.stop()
+
 with open(geojson_file, "r") as f:
     geojson = json.load(f)
 
-# Plot cluster map
+# Plot map
 fig = plot_socioeconomic_clusters(msa_df, city_name=selected_msa, geojson_path=geojson_file)
 
-# --- Use metrics from file if available ---
+# Metrics logic
 if "avg_adoption_rate" in msa_summary.columns:
     adoption = msa_summary["avg_adoption_rate"].iloc[0] * 100
     availability = msa_summary["avg_availability"].iloc[0] * 100
@@ -58,17 +94,18 @@ else:
     availability = msa_df["fcc_gigabit_coverage"].mean() * 100
     income = msa_df["median_income"].median()
     population = msa_df["total_population"].sum()
-    zips = msa_df["zip"].nunique()
 
-# --- Display metrics ---
+# Show metrics
 st.subheader("Summary Metrics")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 col1.metric("Avg Internet Adoption", f"{adoption:.1f}%")
 col2.metric("Avg Availability", f"{availability:.1f}%")
 col3.metric("Median Income", f"${income:,.0f}")
 col4.metric("Total Population", f"{int(population):,}")
-col5.metric("Number of Zips Considered", f"{msa_df['zip'].nunique():,}")
+col5.metric("ZIPs Considered", f"{msa_df['zip'].nunique():,}")
+col6.metric("Counties Involved", f"{msa_df['County'].nunique():,}")
 
+# Show map
 st.plotly_chart(fig, use_container_width=True)
 
 # Cluster Drilldown Table
