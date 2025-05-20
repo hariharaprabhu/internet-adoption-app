@@ -158,9 +158,10 @@ def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluste
             city_centers[city_match[0]].append(geom.centroid)
 
     city_labels = []
+    num_unique_cities = df['city'].nunique()
     for city, centroids in city_centers.items():
         city_upper = city.upper()
-        if city_pop_dict.get(city_upper, 0) < city_pop_threshold:
+        if num_unique_cities > 30 and city_pop_dict.get(city_upper, 0) < city_pop_threshold:
             continue  # skip small cities
         avg_x = np.mean([pt.x for pt in centroids])
         avg_y = np.mean([pt.y for pt in centroids])
