@@ -73,8 +73,9 @@ def rgba_with_opacity(color_str, alpha):
         raise ValueError(f"Unsupported color format: {color_str}")
     return f'rgba({r},{g},{b},{alpha:.2f})'
 
-def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluster"):
-    import plotly.express as px
+
+def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluster", city_pop_dict=None, city_pop_threshold=50000):
+   
 
     df = df.copy()
     df["zip"] = df["zip"].astype(str).str.zfill(5)
@@ -136,7 +137,16 @@ def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluste
                 showlegend=False
             ))
 
-    # Add city name labels
+    # 🔁 Auto-compute city population dictionary if not provided
+    if city_pop_dict is None:
+        city_pop_dict = (
+            df.dropna(subset=["city", "total_population"])
+              .groupby(df["city"].str.upper())["total_population"]
+              .sum()
+              .to_dict()
+        )
+
+    # Add city name labels based on population threshold
     city_centers = defaultdict(list)
     for feature in geojson["features"]:
         zip_code = feature["properties"]["ZCTA5CE10"]
@@ -149,6 +159,9 @@ def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluste
 
     city_labels = []
     for city, centroids in city_centers.items():
+        city_upper = city.upper()
+        if city_pop_dict.get(city_upper, 0) < city_pop_threshold:
+            continue  # skip small cities
         avg_x = np.mean([pt.x for pt in centroids])
         avg_y = np.mean([pt.y for pt in centroids])
         jitter_x = avg_x + np.random.uniform(0.01, 0.02)
@@ -168,23 +181,21 @@ def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluste
     # Layout
     fig.update_geos(fitbounds="locations", visible=False)
     fig.update_layout(
-    title=f"{city_name} | ZIP Code Clusters Based on Socioeconomic Patterns<br><sub>Darker areas indicate lower internet adoption within group</sub>",
-    height=900,
-    width=1000,
-    margin=dict(t=30, r=10, l=10, b=10),
-    title_font=dict(size=20),
+        title=f"{city_name} | ZIP Code Clusters Based on Socioeconomic Patterns<br><sub>Darker areas indicate lower internet adoption within group</sub>",
+        height=900,
+        width=1000,
+        margin=dict(t=30, r=10, l=10, b=10),
+        title_font=dict(size=20),
     )
 
     for cluster_label, color in cluster_color_map.items():
         fig.add_trace(go.Scattergeo(
-            lon=[None], lat=[None],  # invisible dummy point
+            lon=[None], lat=[None],
             mode="markers",
             marker=dict(size=12, color=color),
             name=f"Cluster {cluster_label}"
         ))
 
-
-    # Add disclaimer annotation
     fig.add_annotation(
         text="Colors represent distinct clusters. Opacity reflects internet adoption (darker = lower).",
         showarrow=False,
@@ -194,6 +205,8 @@ def plot_socioeconomic_clusters(df, city_name, geojson_path, cluster_col="cluste
     )
 
     return fig
+
+
 
 def plot_nested_clusters(df, city_name, geojson_path, cluster_col="cluster", subcluster_col="broadband_group"):
     df = df.copy()
