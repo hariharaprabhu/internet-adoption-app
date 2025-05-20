@@ -44,6 +44,7 @@ def format_hover(row):
         # Add relevant census fields as bullets
         return (
         f"<b>ZIP:</b> {row['zip']} ({row['city'].title()})<br>"
+        f"<b>County:</b> {row['County']}<br>"
         f"<b>Cluster:</b> {row['cluster']}<br>"
         f"<b>Adoption:</b> {row['Internet Adoption Rate']*100:.1f}%<br>"
         f"<b>Avg Household Size:</b> {row['avg_household_size']:.1f}<br>"
